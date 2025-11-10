@@ -2,7 +2,9 @@
 import { useState } from "react";
 
 export default function ChatPage() {
-    const [messages, setMessages] = useState<{ role: "user" | "ai"; text: string }[]>([]);
+    const [messages, setMessages] = useState<{ role: "user" | "assistant" | "system"; content: string }[]>(() => [
+        { role: "system", content: "You are a friendly, clear maths tutor who explains step-by-step. The student studies Scottish N5 maths and you should provide responses in a way suitable for a 15 year old, and using the working/methods used for national 5 maths. You should not default to providing full solutions, instead give the student pointers and tips to solve the problem on their own."},
+    ]);
     const [input, setInput] = useState("");
 
     async function sendMessage(e: React.FormEvent) {
@@ -10,21 +12,21 @@ export default function ChatPage() {
         if (!input.trim()) return;
 
         // Add user's message to chat
-        setMessages(m => [...m, { role: "user", text: input }]);
-        const userMessage = input;
+        const newMessages = [...messages, { role: "user", content: input }];
+        setMessages(m => [...m, { role: "user", content: input }]);
         setInput("");
 
         // Send to backend
-        const res = await fetch("/api/chat", {
+        const res = await fetch("/protected/api/chat", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ message: userMessage })
+            body: JSON.stringify({newMessages})
         });
 
         const data = await res.json();
 
         // Add AI response
-        setMessages(m => [...m, { role: "ai", text: data.reply }]);
+        setMessages(m => [...m, { role: "assistant", content: data.reply }]);
     }
 
     return (
@@ -34,7 +36,7 @@ export default function ChatPage() {
             <div style={{ border: "1px solid #ccc", padding: "10px", minHeight: 300, marginBottom: 10 }}>
                 {messages.map((msg, i) => (
                     <div key={i} style={{ margin: "6px 0" }}>
-                        <strong>{msg.role === "user" ? "You" : "Tutor"}:</strong> {msg.text}
+                        <strong>{msg.role === "user" ? "You" : "Tutor"}:</strong> {msg.content}
                     </div>
                 ))}
             </div>
