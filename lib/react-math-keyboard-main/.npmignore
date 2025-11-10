@@ -1,0 +1,16 @@
+# source code
+src
+index.html
+node_modules
+docs 
+
+# compiler
+tsconfig.json
+webpack.config.js
+webpack.docs.config.js
+
+# git
+.git
+
+.storybook
+storybook-static
