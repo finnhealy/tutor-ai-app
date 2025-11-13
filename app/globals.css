@@ -11,8 +11,12 @@
 }
 
 
+
+
 @layer base {
   :root {
+    --button-background: 0 0% 3.9%;
+    --button-text: 0 0% 100%;
     --background: 0 0% 100%;
     --foreground: 0 0% 3.9%;
     --card: 0 0% 100%;
@@ -40,6 +44,8 @@
     --radius: 0.5rem;
   }
   .dark {
+    --button-background: 0 0% 100%;
+    --button-text: 0 0% 3.9%;
     --background: 0 0% 3.9%;
     --foreground: 0 0% 98%;
     --card: 0 0% 3.9%;

@@ -129,7 +129,7 @@ export const Key = ({
             }),
         ...(isTouchDown && { backgroundColor: bgHoverColor }),
         ...(isClicked && {
-          "border-width": "2px 0px 0px 2px",
+          "borderWidth": "2px 0px 0px 2px",
         }),
         ...(labelType === "raw" || labelType === "svg"
           ? { paddingTop: 0 }
