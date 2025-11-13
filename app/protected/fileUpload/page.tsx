@@ -33,14 +33,13 @@ export default function Page() {
 
     }, []);
 
+    const fetchFiles = async () => {
+        const res = await fetch("/protected/api/listFiles");
+        const json = await res.json();
+        if (json.files) setFiles(json.files.map((f: any) => f.name));
+        else console.error(json.error);
+    };
     useEffect(() => {
-        const fetchFiles = async () => {
-            const res = await fetch("/protected/api/listFiles");
-            const json = await res.json();
-            if (json.data) setFiles(json.data.map((f: any) => f.name));
-            else console.error(json.error);
-        };
-
         fetchFiles();
     }, []);
 
@@ -56,7 +55,7 @@ export default function Page() {
         const { data, error } = await supabase.storage
             .from('user-files')
             .upload(`uploads/${user?.email}/${file.name}`, file)
-
+        fetchFiles();
         if (error) throw error
         return data
     }
