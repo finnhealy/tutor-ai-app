@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/client';
 import { User } from "@supabase/supabase-js";
 import {useEffect, useState} from "react";
 import {FaTrash} from "react-icons/fa";
+import { type FileObject } from "@supabase/storage-js"; // part of supabase-js
 
 // example using Supabase Auth Helpers for Next.js
 
@@ -13,7 +14,7 @@ import {FaTrash} from "react-icons/fa";
 export default function Page() {
     const supabase = createClient();
     const [user, setUser] = useState<User | null>(null);
-    const [files, setFiles] = useState<string[]>([]);
+    const [files, setFiles] = useState<FileObject[]>([]);
 
 
     useEffect(() => {
@@ -37,7 +38,7 @@ export default function Page() {
     const fetchFiles = async () => {
         const res = await fetch("/protected/api/listFiles");
         const json = await res.json();
-        if (json.files) setFiles(json.files.map((f: any) => f.name));
+        if (json.files) setFiles(json.files);
         else console.error(json.error);
     };
     useEffect(() => {
@@ -45,8 +46,9 @@ export default function Page() {
     }, []);
 
     async function removeFile(filename: string){
-        console.log("rem file");
-        const res = await fetch(`/protected/api/deleteFile?name=${encodeURIComponent(filename)}`);
+        const res = await fetch(`/protected/api/deleteFile?name=${encodeURIComponent(filename)}`, {
+            method: "delete",
+        });
         fetchFiles();
     }
 
@@ -62,6 +64,24 @@ export default function Page() {
             .upload(`uploads/${user?.email}/${file.name}`, file)
         fetchFiles();
         if (error) throw error
+        return data
+    }
+
+    async function downloadFile(filename: string){
+        if (!supabase || !user) {
+            console.error('Supabase client or user not available yet')
+            return
+        }
+        const { data, error } = await supabase.storage
+            .from('user-files')
+            .download(`uploads/${user?.email}/${filename}`)
+        if (error) throw error
+        const url = URL.createObjectURL(data); // create temporary file URL
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename; // file name for download prompt
+        a.click();
+        URL.revokeObjectURL(url); // clean up
         return data
     }
 
@@ -91,7 +111,7 @@ export default function Page() {
                 <h2>Files uploaded:</h2>
                 <ul>
                     {files.map((file) => (
-                        <li key={file}>{file}
+                        <li key={file.name} onClick={() => {downloadFile(file.name)}}>{file.name}
                             <button type="button" className="p-1 text-red-500 hover:text-red-700" onClick={() => removeFile(file)}>
                                 <FaTrash size={16}/>
                             </button>
