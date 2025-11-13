@@ -111,9 +111,19 @@ export default function Page() {
                 <h2>Files uploaded:</h2>
                 <ul>
                     {files.map((file) => (
-                        <li key={file.name} onClick={() => {downloadFile(file.name)}}>{file.name}
-                            <button type="button" className="p-1 text-red-500 hover:text-red-700" onClick={() => removeFile(file)}>
-                                <FaTrash size={16}/>
+                        <li key={file.name} className="flex items-center justify-between gap-2">
+    <span
+        className="cursor-pointer text-blue-600 hover:underline"
+        onClick={() => downloadFile(file.name)}
+    >
+      {file.name}
+    </span>
+                            <button
+                                type="button"
+                                className="p-1 text-red-500 hover:text-red-700"
+                                onClick={() => removeFile(file.name)}
+                            >
+                                <FaTrash size={16} />
                             </button>
                         </li>
                     ))}
