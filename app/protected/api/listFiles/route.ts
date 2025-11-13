@@ -6,8 +6,6 @@ export async function GET() {
     const { data, error } = await supabase.storage
         .from("user-files")
         .list("uploads/finnhealy113@gmail.com");
-    console.log(data);
     const files = data?.filter(data => data.name !== ".emptyFolderPlaceholder") || [];
-    console.log(files)
     return new Response(JSON.stringify({ files, error }));
 }

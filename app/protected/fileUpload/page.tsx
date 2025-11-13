@@ -2,6 +2,7 @@
 import { createClient } from '@/lib/supabase/client';
 import { User } from "@supabase/supabase-js";
 import {useEffect, useState} from "react";
+import {FaTrash} from "react-icons/fa";
 
 // example using Supabase Auth Helpers for Next.js
 
@@ -43,13 +44,17 @@ export default function Page() {
         fetchFiles();
     }, []);
 
+    async function removeFile(filename: string){
+        console.log("rem file");
+        const res = await fetch(`/protected/api/deleteFile?name=${encodeURIComponent(filename)}`);
+        fetchFiles();
+    }
+
 
 
     async function uploadFile(file: File) {
         if (!supabase || !user) {
             console.error('Supabase client or user not available yet')
-            console.log(supabase)
-            console.log(user)
             return
         }
         const { data, error } = await supabase.storage
@@ -86,7 +91,11 @@ export default function Page() {
                 <h2>Files uploaded:</h2>
                 <ul>
                     {files.map((file) => (
-                        <li key={file}>{file}</li>
+                        <li key={file}>{file}
+                            <button type="button" className="p-1 text-red-500 hover:text-red-700" onClick={() => removeFile(file)}>
+                                <FaTrash size={16}/>
+                            </button>
+                        </li>
                     ))}
                 </ul>
             </div>
