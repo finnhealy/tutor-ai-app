@@ -1,34 +1,69 @@
 "use client"
-import { createClient } from '@supabase/supabase-js'
-import { useState } from 'react'
+import { createClient } from '@/lib/supabase/client';
+import { User } from "@supabase/supabase-js";
+import {useEffect, useState} from "react";
+
+// example using Supabase Auth Helpers for Next.js
 
 
 
 
 
 export default function Page() {
-    const supabase = createClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!
-    )
+    const supabase = createClient();
+    const [user, setUser] = useState<User | null>(null);
+    const [files, setFiles] = useState<string[]>([]);
+
+
+    useEffect(() => {
+
+        const fetchUser = async () => {
+
+            const {
+
+                data: { user },
+
+            } = await supabase.auth.getUser();
+
+            setUser(user);
+
+        };
+
+        fetchUser();
+
+    }, []);
+
+    useEffect(() => {
+        const fetchFiles = async () => {
+            const res = await fetch("/protected/api/listFiles");
+            const json = await res.json();
+            if (json.data) setFiles(json.data.map((f: any) => f.name));
+            else console.error(json.error);
+        };
+
+        fetchFiles();
+    }, []);
+
+
+
     async function uploadFile(file: File) {
+        if (!supabase || !user) {
+            console.error('Supabase client or user not available yet')
+            console.log(supabase)
+            console.log(user)
+            return
+        }
         const { data, error } = await supabase.storage
             .from('user-files')
-            .upload(`uploads/${file.name}`, file)
+            .upload(`uploads/${user?.email}/${file.name}`, file)
 
         if (error) throw error
         return data
     }
-    const [file, setFile] = useState<File | null>(null)
 
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault()
-        if (!file) return
-        await uploadFile(file)
-    }
 
     return (
-        <form onSubmit={handleSubmit}>
+        <form>
             <div>
                 <input
                     id="file-upload"
@@ -46,6 +81,19 @@ export default function Page() {
                     className="inline-flex cursor-pointer items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 bg-primary text-primary-foreground shadow hover:bg-primary/90 h-9 px-4 py-2">Upload
                 </label>
             </div>
+
+
+            <div>
+                <h2>Files uploaded:</h2>
+                <ul>
+                    {files.map((file) => (
+                        <li key={file}>{file}</li>
+                    ))}
+                </ul>
+            </div>
+
+
         </form>
     )
 }
+
