@@ -8,14 +8,47 @@ import { type FileObject } from "@supabase/storage-js"; // part of supabase-js
 // example using Supabase Auth Helpers for Next.js
 
 
+type Item = {
+    id: string;
+    name: string;
+    is_folder: boolean;
+    parent_id: string | null;
+    owner_id: string;
+    storage_path: string | null;
+    mime_type: string | null;
+    size_bytes: number | null;
+    created_at: string;
+    updated_at: string;
+};
 
 
 
 export default function Page() {
     const supabase = createClient();
-    const [user, setUser] = useState<User | null>(null);
-    const [files, setFiles] = useState<FileObject[]>([]);
+    const [currentFolderPath, setCurrentFolderPath] = useState<string>("root");
+    const [currentFolderID, setCurrentFolderID] = useState<string>("");
 
+    const [user, setUser] = useState<User | null>(null);
+    const [userItems, setUserItems] = useState<Item[]>([])
+
+
+
+    useEffect(() => {
+        console.log("currentFolderPath:", currentFolderPath);
+    }, [currentFolderPath]);
+
+    useEffect(() => {
+        console.log("currentFolderID:", currentFolderID);
+    }, [currentFolderID]);
+
+    async function getRootID(): Promise<string>{
+        if (!supabase || !user) {
+            console.error('Supabase client or user not available yet')
+            return ""
+        }
+        const { data, error } = await supabase.rpc('get_root_id');
+        return data
+    };
 
     useEffect(() => {
 
@@ -35,59 +68,99 @@ export default function Page() {
 
     }, []);
 
-    const fetchFiles = async () => {
-        const res = await fetch("/protected/api/listFiles");
-        const json = await res.json();
-        if (json.files) setFiles(json.files);
-        else console.error(json.error);
-    };
     useEffect(() => {
-        fetchFiles();
-    }, []);
+        const fetchRootID = async () => {
+            if (!user) return;
+            const rootID = await getRootID();
+            setCurrentFolderID(rootID);
+            setCurrentFolderPath(rootID);
+            fetchFiles(user, rootID);
+        };
+        fetchRootID();
+    }, [user]);
+
+
+
+
+    const fetchFiles = async (currentUser: User, rootID : string) => {
+        if (!supabase || !currentUser) {
+            console.error('Supabase client or user not available yet')
+            return
+        }
+        const { data, error } = await supabase.rpc('get_available_items', {parent : rootID});
+        setUserItems(data)
+
+    };
+
 
     async function removeFile(filename: string){
+        if (!supabase || !user) {
+            console.error('Supabase client or user not available yet')
+            return
+        }
         const res = await fetch(`/protected/api/deleteFile?name=${encodeURIComponent(filename)}`, {
             method: "delete",
         });
-        fetchFiles();
+        fetchFiles(user);
     }
 
 
 
     async function uploadFile(file: File) {
+        const filename = file.name;
+        const isfolder = false;
+        const filetype = file.type;
+        const filesize = file.size;
+        const filepath = currentFolderPath;
+        const parentID = currentFolderID;
+        console.log({ parentid : parentID, desiredname : filename, isfolder : isfolder, mimetype : filetype, sizebytes : filesize, storagepath : filepath})
         if (!supabase || !user) {
             console.error('Supabase client or user not available yet')
             return
         }
-        const { data, error } = await supabase.storage
-            .from('user-files')
-            .upload(`uploads/${user?.email}/${file.name}`, file)
-        fetchFiles();
-        if (error) throw error
-        return data
+        const {data: queryData, error: queryError} = await supabase.rpc('upload_file', { parentid : parentID, desiredname : filename, isfolder : isfolder, mimetype : filetype, sizebytes : filesize, storagepath : filepath})
+        if (queryError) {
+            console.error("Upload failed:", queryError.message);
+        } else {
+            console.log("Upload succeeded!");
+            const { data, error } = await supabase.storage
+                .from('user-files')
+                .upload(`${filepath}/${filename}`, file)
+            if (error) throw error
+            fetchFiles(user);
+        }
+
+        return;
     }
 
-    async function downloadFile(filename: string){
+    async function downloadFile(fileID: string, filePath: string, filename : string){
         if (!supabase || !user) {
             console.error('Supabase client or user not available yet')
             return
         }
-        const { data, error } = await supabase.storage
+        const { data: isAllowed, error: queryError } = await supabase.rpc('can_user_access_file', {file_id : fileID});
+        if (queryError) throw queryError
+        if (isAllowed === true){
+            console.log("download allowed")
+        }
+        const { data: fileData, error: downloadError} = await supabase.storage
             .from('user-files')
-            .download(`uploads/${user?.email}/${filename}`)
-        if (error) throw error
-        const url = URL.createObjectURL(data); // create temporary file URL
+            .download(`${filePath}/${filename}`)
+        if (downloadError) throw downloadError
+
+        const url = URL.createObjectURL(fileData); // create temporary file URL
         const a = document.createElement('a');
         a.href = url;
         a.download = filename; // file name for download prompt
         a.click();
         URL.revokeObjectURL(url); // clean up
-        return data
+        return fileData
     }
 
 
     return (
         <form>
+            <p>Current Folder path: {currentFolderPath}</p>
             <div>
                 <input
                     id="file-upload"
@@ -110,20 +183,20 @@ export default function Page() {
             <div>
                 <h2>Files uploaded:</h2>
                 <ul>
-                    {files.map((file) => (
-                        <li key={file.name} className="flex items-center justify-between gap-2">
+                     {userItems?.map((item) => (
+                        <li key={item.id} className="flex items-center justify-between gap-2">
     <span
         className="cursor-pointer text-blue-600 hover:underline"
-        onClick={() => downloadFile(file.name)}
+        onClick={() => downloadFile(item.id, currentFolderPath, item.name)}
     >
-      {file.name}
+      {item.name}
     </span>
                             <button
                                 type="button"
                                 className="p-1 text-red-500 hover:text-red-700"
-                                onClick={() => removeFile(file.name)}
+                                onClick={() => removeFile(item.name)}
                             >
-                                <FaTrash size={16} />
+                                <FaTrash size={16}/>
                             </button>
                         </li>
                     ))}
