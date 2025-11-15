@@ -12,12 +12,10 @@ export async function DELETE(req: NextRequest) {
         return new Response("Unauthorized", { status: 401 });
     }
     const {data: queryData, error: queryError} = await supabase.rpc('delete_item', { p_id : req.nextUrl.searchParams.get("id")})
-    const filename = req.nextUrl.searchParams.get("name"); // get the query param
-    const filepath = req.nextUrl.searchParams.get("filepath");
-    const { data, error } = await supabase.storage
-        .from("user-files")
-        .remove([`${filepath}/${filename}`]);
+    //const filename = req.nextUrl.searchParams.get("name"); // get the query param
+   // const { data, error } = await supabase.storage
+      //  .from("user-files")
+     //  .remove([`uploads/${d.user.email}/${filename}`]);
     return new Response(JSON.stringify({ queryData, queryError }));
 }
-
 
