@@ -26,8 +26,7 @@ export default function Page() {
     const supabase = createClient();
     const [currentFolderPath, setCurrentFolderPath] = useState<string>("root");
     const [currentFolderID, setCurrentFolderID] = useState<string>("");
-    const [previousPath, setPreviousPath] = useState<string>("root");
-    const [previousID, setPreviousID] = useState<string>("");
+    const [folderStack, setFolderStack] = useState<{id: string; path: string}[]>([]);
 
     const [user, setUser] = useState<User | null>(null);
     const [userItems, setUserItems] = useState<Item[]>([])
@@ -153,7 +152,8 @@ export default function Page() {
         return;
     }
 
-    async function createFolder(folderName : string){
+    async function createFolder(){
+        const folderName = prompt("What do you want to call your folder?");
         const isfolder = true;
         const filepath = currentFolderPath;
         const parentID = currentFolderID;
@@ -183,9 +183,8 @@ export default function Page() {
             console.error("folder entry failure: filepath is null")
             return
         }
-        setPreviousPath(filepath);
-        setPreviousID(currentFolderID);
 
+         setFolderStack(prevStack => [...prevStack, { id: currentFolderID, path: filepath }]);
         setCurrentFolderPath(filepath + '/' + filename);
         setCurrentFolderID(fileID);
         fetchFiles(user, fileID);
@@ -197,9 +196,19 @@ export default function Page() {
             return
         }
 
-        setCurrentFolderPath(previousPath)
-        setCurrentFolderID(previousID)
-        fetchFiles(user, previousID)
+        if (folderStack.length === 0) {
+            console.log("Already at root folder");
+            return;
+        }
+
+        const popped = folderStack[folderStack.length - 1];
+
+        setFolderStack(prevStack => prevStack.slice(0, -1));
+
+
+        setCurrentFolderPath(popped.path);
+        setCurrentFolderID(popped.id);
+        fetchFiles(user, popped.id);
     }
 
 
@@ -239,7 +248,7 @@ export default function Page() {
             </label>
             <label
                 htmlFor="create-folder"
-                onClick={() => createFolder('newfolder')}
+                onClick={() => createFolder()}
                 className="inline-flex cursor-pointer items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 bg-primary text-primary-foreground shadow hover:bg-primary/90 h-9 px-4 py-2">New
                 Folder
             </label>
