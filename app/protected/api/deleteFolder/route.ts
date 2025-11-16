@@ -27,11 +27,9 @@ export async function DELETE(req: NextRequest) {
             return new Response("Unauthorized", { status: 401 });
         }
         const {data: allItems, error: firstQueryError} = await supabase.rpc('get_all_items_in_folder', { p_folder_id : req.nextUrl.searchParams.get("id")})
-        console.log(allItems)
         const ItemIDs = allItems.map((item: Item) => item.item_id);
 
         const nonFolderPaths = allItems.filter((item : Item) => item.is_folder === false).map((item : Item) => item.storage_path + '/' + item.name)
-        console.log("second query: ", { ids : ItemIDs, p_user : d.user.id})
         const {data: dataone, error: SecondQueryError} = await supabase.rpc('delete_items', { ids : ItemIDs, p_user : d.user.id})
         if (SecondQueryError){
             console.error(SecondQueryError)
@@ -41,15 +39,18 @@ export async function DELETE(req: NextRequest) {
         // const { data, error } = await supabase.storage
         //  .from("user-files")
         //  .remove([`uploads/${d.user.email}/${filename}`]);
-        const { data, error } = await supabase.storage
-            .from('user-files')
-            .remove(nonFolderPaths);
+        if (nonFolderPaths.length > 0) {
+            const { data, error } = await supabase.storage
+                .from('user-files')
+                .remove(nonFolderPaths);
 
-        if (error) {
-            console.error('Failed to delete files:', error);
-        } else {
-            console.log('Deleted files:', data);
+            if (error) {
+                console.error('Failed to delete files:', error);
+            } else {
+                console.log('Deleted files');
+            }
         }
+
         return new Response(JSON.stringify({ allItems, firstQueryError }));
     }catch{
         console.error('Failed to delete files:');

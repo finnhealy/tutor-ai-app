@@ -2,7 +2,7 @@
 import { createClient } from '@/lib/supabase/client';
 import { User } from "@supabase/supabase-js";
 import {useEffect, useState} from "react";
-import {FaTrash, FaFolder} from "react-icons/fa";
+import {FaTrash, FaFolder,FaShare} from "react-icons/fa";
 
 // example using Supabase Auth Helpers for Next.js
 
@@ -93,7 +93,7 @@ export default function Page() {
     };
 
 
-    async function removeFile(id: string, filepath: string | null){
+    async function removeFile(id: string, filepath: string | null, name : string){
         if (!supabase || !user) {
             console.error('Supabase client or user not available yet')
             return
@@ -102,7 +102,7 @@ export default function Page() {
             console.error("invalid filepath recieved for remove operation: " + filepath)
             return
         }
-        const res = await fetch(`/protected/api/deleteFile?id=${encodeURIComponent(id)}&filepath=${encodeURIComponent(filepath)}`, {
+        const res = await fetch(`/protected/api/deleteFile?id=${encodeURIComponent(id)}&filepath=${encodeURIComponent(filepath)}&name=${encodeURIComponent(name)}`, {
             method: "delete",
         });
         fetchFiles(user, currentFolderID);
@@ -154,6 +154,10 @@ export default function Page() {
 
     async function createFolder(){
         const folderName = prompt("What do you want to call your folder?");
+        if (!folderName){
+            console.log("folder creation abandoned");
+            return;
+        }
         const isfolder = true;
         const filepath = currentFolderPath;
         const parentID = currentFolderID;
@@ -211,7 +215,19 @@ export default function Page() {
         fetchFiles(user, popped.id);
     }
 
+    async function shareItem(itemID : string, isfolder : boolean){
+        const targetID = prompt("What is the ID of the user you want to share with?");
+        if (isfolder){
+            const res = await fetch(`/protected/api/shareFolder?folderID=${encodeURIComponent(itemID)}&targetID=${encodeURIComponent(targetID)}&canWrite=${true}`, {
+                method: "post",
+            });
+            return
+        }
+        const res = await fetch(`/protected/api/shareFile?itemID=${encodeURIComponent(itemID)}&targetID=${encodeURIComponent(targetID)}&canWrite=${true}`, {
+            method: "post",
+        });
 
+    }
 
     async function downloadFile(fileID: string, filePath: string, filename : string){
         if (!supabase || !user) {
@@ -285,11 +301,18 @@ export default function Page() {
                             <button
                                 type="button"
                                 className="p-1 text-red-500 hover:text-red-700"
-                                onClick={() => item.is_folder ? removeFolder(item.id, item.storage_path) : removeFile(item.id, item.storage_path)}
+                                onClick={() => item.is_folder ? removeFolder(item.id, item.storage_path) : removeFile(item.id, item.storage_path, item.name)}
                             >
                                 <FaTrash size={16}/>
                             </button>
                             {item.is_folder && (<FaFolder size={16}/>)}
+                            <button
+                                type="button"
+                                className="p-1 text-red-500 hover:text-blue-700"
+                                onClick ={()=> shareItem(item.id, item.is_folder)}>
+
+                                <FaShare size={16}/>
+                            </button>
                         </li>
                     ))}
                 </ul>
