@@ -54,7 +54,7 @@ export default function Page() {
 
     let refreshTimeout: NodeJS.Timeout | null = null;
 
-    function scheduleRefresh() {
+    function scheduleRefresh(user : User, currentFolderID : string, currentFolderPath : string) {
         if (!user) return;
         if (refreshTimeout) clearTimeout(refreshTimeout);
 
@@ -75,7 +75,7 @@ export default function Page() {
         if (!user || !currentFolderID) return;
 
         // Load shared files if we're at root
-        if (currentFolderPath === "root") {
+        if (currentFolderPath === user.id) {
             fetchFiles(user, currentFolderID, currentFolderPath);
             fetchSharedFiles(user);
             return;
@@ -91,7 +91,7 @@ export default function Page() {
             if (!user) return;
             const rootID = await getRootID();
             setCurrentFolderID(rootID);
-            setCurrentFolderPath('root');
+            setCurrentFolderPath(user.id);
             fetchFiles(user, rootID, currentFolderPath);
         };
         fetchRootID();
@@ -99,6 +99,9 @@ export default function Page() {
 
     useEffect(() => {
         if (!user) return;
+        if(currentFolderPath == "root"){
+            return;
+        }
 
         // Create ONE stable channel for the user, not per-folder
         const channel = supabase.channel("realtime-items");
@@ -110,7 +113,6 @@ export default function Page() {
                     event: "*",
                     schema: "public",
                     table: "items",
-                    filter: `owner_id=eq.${user.id}`, // IMPORTANT!!
                 },
                 () => {
                     console.log("ITEMS change");
@@ -126,7 +128,8 @@ export default function Page() {
                 },
                 () => {
                     console.log("PERMISSIONS change");
-                    scheduleRefresh();
+                    console.log("Realtime sees:", currentFolderID, currentFolderPath);
+                    scheduleRefresh(user, currentFolderID, currentFolderPath);
                 }
             )
             .subscribe();
@@ -134,7 +137,7 @@ export default function Page() {
         return () => {
             supabase.removeChannel(channel);
         };
-    }, [user]); // <-- ONLY user, no folder
+    }, [user, currentFolderPath]); // <-- ONLY user, no folder
 
 
     const fetchFiles = async (currentUser: User, rootID : string, currentFolderPath : string) => {
@@ -155,13 +158,13 @@ export default function Page() {
             return;
         }
 
-        if(currentFolderPath == "root"){
-            console.log("currentFolderPath == root");
+        if(currentFolderPath == currentUser.id){
+            console.log("currentFolderPath == root directory", currentFolderPath);
             let shared: Item[] = await returnfetchSharedFiles(currentUser);
             setUserItems([...data,...shared]);
 
         }else{
-            console.log("current folder path not root", currentFolderPath)
+            console.log("current folder path not root directory", currentFolderPath)
             setUserItems(data);
         }
 
@@ -181,7 +184,7 @@ export default function Page() {
         }
         const updatedItems: Item[] = data.map(item => ({
             ...item,
-            ui_path: "root",      // NEW field or computed field
+            ui_path: currentUser.id,      // NEW field or computed field
             parent_id: null,      // ok to override
         }));
         console.log("shared files are", data);
