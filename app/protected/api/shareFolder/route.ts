@@ -26,7 +26,7 @@ export async function POST(req: NextRequest) {
     }
     const folderID = req.nextUrl.searchParams.get("folderID"); // get the query param
     const write =  req.nextUrl.searchParams.get("canWrite");
-    const targetID = req.nextUrl.searchParams.get("targetID"); // get the query param
+    const targetemail = req.nextUrl.searchParams.get("targetID"); // get the query param
 
 
     // get all items inside folder
@@ -37,7 +37,10 @@ export async function POST(req: NextRequest) {
     itemIDs.push(folderID)
     console.log("changing permissions for ids: ", itemIDs);
 
-
+    const { data : dataone, error : errorone } = await supabase.rpc("get_user_id", {
+        p_email: targetemail
+    });
+    const targetID = dataone
 
     // add_multiple_item_permission takes an array of itemids, ownerid, target user id, canread, canwrite
     const {data: queryData, error: queryError} = await supabase.rpc('add_multiple_item_permission', { ids: itemIDs, owner_id : d.user.id, target_id : targetID, can_read : true, can_write : write})

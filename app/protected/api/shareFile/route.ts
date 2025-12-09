@@ -11,8 +11,12 @@ export async function POST(req: NextRequest) {
         return new Response("Unauthorized", { status: 401 });
     }
     const itemID = req.nextUrl.searchParams.get("itemID"); // get the query param
-    const targetID = req.nextUrl.searchParams.get("targetID"); // get the query param
+    const targetemail = req.nextUrl.searchParams.get("targetID"); // get the query param
     const write =  req.nextUrl.searchParams.get("canWrite");
+    const { data : dataone, error : errorone } = await supabase.rpc("get_user_id", {
+        p_email: targetemail
+    });
+    const targetID = dataone
     const {data: queryData, error: queryError} = await supabase.rpc('add_item_permission', { owner_id : d.user.id, item_id : itemID, user_id : targetID, can_read : true, can_write : write})
     console.log(queryData);
     console.log(queryError);

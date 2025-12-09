@@ -19,10 +19,11 @@ export default function ProtectedLayout({
               <Link href={"/protected/fileUpload"}>File Upload</Link>
 
             </div>
-            {!hasEnvVars ? <EnvVarWarning /> : <AuthButton />}
+            {!hasEnvVars ? <EnvVarWarning/> : <AuthButton/>}
           </div>
         </nav>
-        <div className="flex-1 flex flex-col gap-20 max-w-5xl p-5 !items-start !justify-start self-start w-full">
+        <div
+            className="flex-1 flex flex-col gap-20 max-w-5xl p-5 items-center justify-start self-center w-full mx-auto">
           {children}
         </div>
 
@@ -30,15 +31,15 @@ export default function ProtectedLayout({
           <p>
             Powered by{" "}
             <a
-              href="https://supabase.com/?utm_source=create-next-app&utm_medium=template&utm_term=nextjs"
-              target="_blank"
-              className="font-bold hover:underline"
-              rel="noreferrer"
+                href="https://supabase.com/?utm_source=create-next-app&utm_medium=template&utm_term=nextjs"
+                target="_blank"
+                className="font-bold hover:underline"
+                rel="noreferrer"
             >
               Supabase
             </a>
           </p>
-          <ThemeSwitcher />
+          <ThemeSwitcher/>
         </footer>
       </div>
     </main>

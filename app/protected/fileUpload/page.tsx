@@ -356,7 +356,7 @@ export default function Page() {
     }
 
     async function shareItem(itemID : string, isfolder : boolean){
-        const targetID = prompt("What is the ID of the user you want to share with?");
+        const targetID = prompt("What is the Email of the user you want to share with?");
         if (isfolder){
             const res = await fetch(`/protected/api/shareFolder?folderID=${encodeURIComponent(itemID)}&targetID=${encodeURIComponent(targetID)}&canWrite=${false}`, {
                 method: "post",
@@ -449,7 +449,13 @@ export default function Page() {
                 <button
                     type="button"
                     onClick={navigateBack}
-                    className="flex items-center gap-2 px-3 py-2 rounded-md bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 transition text-sm font-medium shadow-sm"
+                    className={`
+        flex items-center gap-2 px-3 py-2 rounded-md transition text-sm font-medium shadow-sm
+        ${currentFolderPath === user?.id
+                        ? "bg-gray-200 dark:bg-gray-700 opacity-50 cursor-not-allowed"
+                        : "bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700"
+                    }
+    `}
                 >
                     <FaArrowLeft/>
                     <span>Back</span>
