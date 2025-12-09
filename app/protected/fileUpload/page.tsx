@@ -2,8 +2,18 @@
 import { createClient } from '@/lib/supabase/client';
 import { User } from "@supabase/supabase-js";
 import {useEffect, useState} from "react";
-import {FaTrash, FaFolder,FaShare} from "react-icons/fa";
-
+import {FaTrash, FaFolder,FaShare, FaUpload, FaArrowLeft, FaFolderPlus} from "react-icons/fa";
+import { FaFileAlt } from "react-icons/fa";
+import {
+    FaRegFilePdf,
+    FaRegFileImage,
+    FaRegFileVideo,
+    FaRegFileAudio,
+    FaRegFileWord,
+    FaRegFileExcel,
+    FaRegFileCode,
+    FaRegFileAlt,
+} from "react-icons/fa";
 // example using Supabase Auth Helpers for Next.js
 
 
@@ -13,11 +23,12 @@ type Item = {
     is_folder: boolean;
     parent_id: string | null;
     owner_id: string;
-    storage_path: string | null;
+    storage_path: string;
     mime_type: string | null;
     size_bytes: number | null;
     created_at: string;
     updated_at: string;
+    ui_path: string | null;
 };
 
 
@@ -27,19 +38,10 @@ export default function Page() {
     const [currentFolderPath, setCurrentFolderPath] = useState<string>("root");
     const [currentFolderID, setCurrentFolderID] = useState<string>("");
     const [folderStack, setFolderStack] = useState<{id: string; path: string}[]>([]);
-
     const [user, setUser] = useState<User | null>(null);
     const [userItems, setUserItems] = useState<Item[]>([])
 
 
-
-    useEffect(() => {
-        console.log("currentFolderPath:", currentFolderPath);
-    }, [currentFolderPath]);
-
-    useEffect(() => {
-        console.log("currentFolderID:", currentFolderID);
-    }, [currentFolderID]);
 
     async function getRootID(): Promise<string>{
         if (!supabase || !user) {
@@ -50,46 +52,160 @@ export default function Page() {
         return data
     };
 
+    let refreshTimeout: NodeJS.Timeout | null = null;
+
+    function scheduleRefresh() {
+        if (!user) return;
+        if (refreshTimeout) clearTimeout(refreshTimeout);
+
+        refreshTimeout = setTimeout(() => {
+            fetchFiles(user, currentFolderID, currentFolderPath);
+        }, 150);
+    }
+
     useEffect(() => {
-
         const fetchUser = async () => {
-
-            const {
-
-                data: { user },
-
-            } = await supabase.auth.getUser();
-
+            const {data: { user },} = await supabase.auth.getUser();
             setUser(user);
-
         };
-
         fetchUser();
-
     }, []);
+
+    useEffect(() => {
+        if (!user || !currentFolderID) return;
+
+        // Load shared files if we're at root
+        if (currentFolderPath === "root") {
+            fetchFiles(user, currentFolderID, currentFolderPath);
+            fetchSharedFiles(user);
+            return;
+        }
+
+        // Normal folder
+        fetchFiles(user, currentFolderID, currentFolderPath);
+
+    }, [user, currentFolderID, currentFolderPath]);
 
     useEffect(() => {
         const fetchRootID = async () => {
             if (!user) return;
             const rootID = await getRootID();
             setCurrentFolderID(rootID);
-            setCurrentFolderPath(rootID);
-            fetchFiles(user, rootID);
+            setCurrentFolderPath('root');
+            fetchFiles(user, rootID, currentFolderPath);
         };
         fetchRootID();
     }, [user]);
 
+    useEffect(() => {
+        if (!user) return;
+
+        // Create ONE stable channel for the user, not per-folder
+        const channel = supabase.channel("realtime-items");
+
+        channel
+            .on(
+                "postgres_changes",
+                {
+                    event: "*",
+                    schema: "public",
+                    table: "items",
+                    filter: `owner_id=eq.${user.id}`, // IMPORTANT!!
+                },
+                () => {
+                    console.log("ITEMS change");
+                    fetchFiles(user, currentFolderID, currentFolderPath);
+                }
+            )
+            .on(
+                "postgres_changes",
+                {
+                    event: "*",
+                    schema: "public",
+                    table: "item_permissions",
+                },
+                () => {
+                    console.log("PERMISSIONS change");
+                    scheduleRefresh();
+                }
+            )
+            .subscribe();
+
+        return () => {
+            supabase.removeChannel(channel);
+        };
+    }, [user]); // <-- ONLY user, no folder
 
 
-
-    const fetchFiles = async (currentUser: User, rootID : string) => {
+    const fetchFiles = async (currentUser: User, rootID : string, currentFolderPath : string) => {
+        console.log("fetching available items under folderid", rootID);
+        console.log(currentUser.id);
         if (!supabase || !currentUser) {
-            console.error('Supabase client or user not available yet')
-            return
+            console.error('Supabase client or user not available yet');
+            return;
         }
-        const { data, error } = await supabase.rpc('get_available_items', {parent : rootID});
-        setUserItems(data)
+        let folderID = currentFolderID
+        if(!folderID){
+            console.log("nocurrentfolderid");
+            rootID = await getRootID();
+            folderID = rootID;
+        }else{
 
+        }
+        console.log("calling get available items with folderid ", folderID);
+        const { data, error } = await supabase.rpc('get_available_items', {parent : folderID});
+        if(error){
+            console.error(error);
+            return;
+        }
+
+        if(currentFolderPath == "root"){
+            console.log("currentFolderPath == root");
+            let shared: Item[] = await returnfetchSharedFiles(currentUser);
+            setUserItems([...data,...shared]);
+
+        }else{
+            console.log("current folder path not root", currentFolderPath)
+            setUserItems(data);
+        }
+
+    };
+
+    const returnfetchSharedFiles = async (currentUser: User) => {
+        console.log("fetching shared files");
+        if (!supabase || !currentUser) {
+            console.error('Supabase client or user not available yet');
+            return;
+        }
+        let data,error;
+        ({ data, error } = await supabase.rpc('get_shared_top_level_items'));
+        if(error){
+            console.error(error);
+            return;
+        }
+        const updatedItems: Item[] = data.map(item => ({
+            ...item,
+            ui_path: "root",      // NEW field or computed field
+            parent_id: null,      // ok to override
+        }));
+        console.log("shared files are", data);
+        return updatedItems;
+    };
+
+    const fetchSharedFiles = async (currentUser: User) => {
+        console.log("fetching shared files");
+        if (!supabase || !currentUser) {
+            console.error('Supabase client or user not available yet');
+            return;
+        }
+        let data,error;
+        ({ data, error } = await supabase.rpc('get_shared_top_level_items'));
+        if(error){
+            console.error(error);
+            return;
+        }
+        console.log("shared files are", data);
+        setUserItems(userItems => [...userItems,...data]);
     };
 
 
@@ -105,7 +221,20 @@ export default function Page() {
         const res = await fetch(`/protected/api/deleteFile?id=${encodeURIComponent(id)}&filepath=${encodeURIComponent(filepath)}&name=${encodeURIComponent(name)}`, {
             method: "delete",
         });
-        fetchFiles(user, currentFolderID);
+
+        if (!res.ok) {
+            // If unauthorized:
+            if (res.status === 401) {
+                alert("You do not have permissions to delete this file.");
+                return;
+            }
+
+            // Any other error:
+            const { error } = await res.json();
+            console.error("Delete Failed:", error);
+            return;
+        }
+        fetchFiles(user, currentFolderID, currentFolderPath);
     }
 
     async function removeFolder(id: string, filepath: string | null){
@@ -120,7 +249,20 @@ export default function Page() {
         const res = await fetch(`/protected/api/deleteFolder?id=${encodeURIComponent(id)}&filepath=${encodeURIComponent(filepath)}`, {
             method: "delete",
         });
-        fetchFiles(user, currentFolderID);
+        if (!res.ok) {
+            // If unauthorized:
+            if (res.status === 401) {
+                alert("You do not have permissions to delete this Folder.");
+                return;
+            }
+
+            // Any other error:
+            const { error } = await res.json();
+            console.error("Delete failed:", error);
+            return;
+        }
+
+        fetchFiles(user, currentFolderID, currentFolderPath);
     }
 
 
@@ -132,21 +274,23 @@ export default function Page() {
         const filesize = file.size;
         const filepath = currentFolderPath;
         const parentID = currentFolderID;
-        console.log({ parentid : parentID, desiredname : filename, isfolder : isfolder, mimetype : filetype, sizebytes : filesize, storagepath : filepath})
+
         if (!supabase || !user) {
             console.error('Supabase client or user not available yet')
             return
         }
-        const {data: queryData, error: queryError} = await supabase.rpc('upload_file', { parentid : parentID, desiredname : filename, isfolder : isfolder, mimetype : filetype, sizebytes : filesize, storagepath : filepath})
+
+        const {data: queryData, error: queryError} = await supabase.rpc('upload_file', { parentid : parentID, desiredname : filename, isfolder : isfolder, mimetype : filetype, sizebytes : filesize, storagepath : filepath}).select();
+        let newid = queryData;
         if (queryError) {
             console.error("Upload failed:", queryError.message);
         } else {
-            console.log("Upload succeeded!");
             const { data, error } = await supabase.storage
                 .from('user-files')
-                .upload(`${filepath}/${filename}`, file)
-            if (error) throw error
-            fetchFiles(user, currentFolderID);
+                .upload(`${filepath}/${filename}`, file);
+            if (error) throw error;
+            const {data: queryData, error: queryError} = await supabase.rpc('inherit_permissions', { new_item_id : newid, parent_item_id : parentID})
+            fetchFiles(user, currentFolderID, currentFolderPath);
         }
 
         return;
@@ -161,7 +305,6 @@ export default function Page() {
         const isfolder = true;
         const filepath = currentFolderPath;
         const parentID = currentFolderID;
-        console.log({ parentid : parentID, desiredname : folderName, isfolder : isfolder, storagepath : filepath})
         if (!supabase || !user) {
             console.error('Supabase client or user not available yet')
             return
@@ -171,8 +314,7 @@ export default function Page() {
         if (queryError) {
             console.error("folder creation failed:", queryError.message);
         } else {
-            console.log("folder creation succeeded!");
-            fetchFiles(user, currentFolderID);
+            fetchFiles(user, currentFolderID, currentFolderPath);
         }
 
         return;
@@ -188,16 +330,15 @@ export default function Page() {
             return
         }
 
-         setFolderStack(prevStack => [...prevStack, { id: currentFolderID, path: filepath }]);
+        setFolderStack(prevStack => [...prevStack, { id: currentFolderID, path: filepath }]);
         setCurrentFolderPath(filepath + '/' + filename);
         setCurrentFolderID(fileID);
-        fetchFiles(user, fileID);
     }
 
     function navigateBack(){
         if (!supabase || !user) {
-            console.error('Supabase client or user not available yet')
-            return
+            console.error('Supabase client or user not available yet');
+            return;
         }
 
         if (folderStack.length === 0) {
@@ -212,20 +353,67 @@ export default function Page() {
 
         setCurrentFolderPath(popped.path);
         setCurrentFolderID(popped.id);
-        fetchFiles(user, popped.id);
+
     }
 
     async function shareItem(itemID : string, isfolder : boolean){
         const targetID = prompt("What is the ID of the user you want to share with?");
         if (isfolder){
-            const res = await fetch(`/protected/api/shareFolder?folderID=${encodeURIComponent(itemID)}&targetID=${encodeURIComponent(targetID)}&canWrite=${true}`, {
+            const res = await fetch(`/protected/api/shareFolder?folderID=${encodeURIComponent(itemID)}&targetID=${encodeURIComponent(targetID)}&canWrite=${false}`, {
                 method: "post",
             });
-            return
+            return;
         }
-        const res = await fetch(`/protected/api/shareFile?itemID=${encodeURIComponent(itemID)}&targetID=${encodeURIComponent(targetID)}&canWrite=${true}`, {
+        const res = await fetch(`/protected/api/shareFile?itemID=${encodeURIComponent(itemID)}&targetID=${encodeURIComponent(targetID)}&canWrite=${false}`, {
             method: "post",
         });
+
+    }
+
+    function getFileIcon(filename: string) {
+        const ext = filename.split('.').pop()?.toLowerCase();
+
+        switch (ext) {
+            case "pdf":
+                return <FaRegFilePdf size={38} className="text-red-600" />;
+            case "jpg":
+            case "jpeg":
+            case "png":
+            case "gif":
+                return <FaRegFileImage size={38} className="text-yellow-600" />;
+            case "mp4":
+            case "mov":
+            case "avi":
+                return <FaRegFileVideo size={38} className="text-purple-600" />;
+            case "mp3":
+            case "wav":
+                return <FaRegFileAudio size={38} className="text-green-600" />;
+            case "doc":
+            case "docx":
+                return <FaRegFileWord size={38} className="text-blue-600" />;
+            case "xls":
+            case "xlsx":
+                return <FaRegFileExcel size={38} className="text-green-600" />;
+            case "js":
+            case "ts":
+            case "py":
+            case "java":
+            case "cpp":
+                return <FaRegFileCode size={38} className="text-gray-600" />;
+            case "txt":
+                return <FaRegFileAlt size={38} className="text-gray-500" />;
+            default:
+                return <FaRegFileAlt size={38} />;
+        }
+    }
+
+    function displayPath(currentFolderPath : string){
+        const i = currentFolderPath.indexOf('/');
+        if( i === -1){
+            return 'root';
+        }else{
+            return 'root' + currentFolderPath.substring(currentFolderPath.indexOf('/'));
+        }
 
     }
 
@@ -235,14 +423,15 @@ export default function Page() {
             return
         }
         const { data: isAllowed, error: queryError } = await supabase.rpc('can_user_access_file', {file_id : fileID});
-        if (queryError) throw queryError
-        if (isAllowed === true){
-            console.log("download allowed")
+        if (queryError) throw queryError;
+        if (isAllowed === false){
+            console.error("download not allowed");
+            return;
         }
         const { data: fileData, error: downloadError} = await supabase.storage
             .from('user-files')
-            .download(`${filePath}/${filename}`)
-        if (downloadError) throw downloadError
+            .download(`${filePath}/${filename}`);
+        if (downloadError) throw downloadError;
 
         const url = URL.createObjectURL(fileData); // create temporary file URL
         const a = document.createElement('a');
@@ -250,72 +439,111 @@ export default function Page() {
         a.download = filename; // file name for download prompt
         a.click();
         URL.revokeObjectURL(url); // clean up
-        return fileData
+        return fileData;
     }
 
 
     return (
         <form>
-            <p>Current Folder path: {currentFolderPath}</p>
-            <label
-                htmlFor="navigate-back"
-                onClick={() => navigateBack()}
-                className="inline-flex cursor-pointer items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 bg-primary text-primary-foreground shadow hover:bg-primary/90 h-9 px-4 py-2">Back
-            </label>
-            <label
-                htmlFor="create-folder"
-                onClick={() => createFolder()}
-                className="inline-flex cursor-pointer items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 bg-primary text-primary-foreground shadow hover:bg-primary/90 h-9 px-4 py-2">New
-                Folder
-            </label>
-            <div>
+            <div className="flex items-center gap-3 mb-4">
+
+                {/* Back button */}
+                <button
+                    type="button"
+                    onClick={navigateBack}
+                    className="flex items-center gap-2 px-3 py-2 rounded-md bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 transition text-sm font-medium shadow-sm"
+                >
+                    <FaArrowLeft/>
+                    <span>Back</span>
+                </button>
+
+                {/* New Folder */}
+                <button
+                    type="button"
+                    onClick={createFolder}
+                    className="flex items-center gap-2 px-3 py-2 rounded-md bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 transition text-sm font-medium shadow-sm"
+                >
+                    <FaFolderPlus/>
+                    <span>New Folder</span>
+                </button>
+
+                {/* Upload */}
+                <label
+                    htmlFor="file-upload"
+                    className="flex cursor-pointer items-center gap-2 px-3 py-2 rounded-md bg-blue-600 text-white hover:bg-blue-700 transition text-sm font-medium shadow-sm"
+                >
+                    <FaUpload/>
+                    <span>Upload</span>
+                </label>
+
                 <input
                     id="file-upload"
                     type="file"
-                    className="sr-only"
+                    style={{display: "none"}}
                     onChange={(e) => {
                         const file = e.target.files?.[0];
-                        if (file) {
-                            uploadFile(file); // trigger upload immediately
-                        }
+                        if (file) uploadFile(file);
                     }}
                 />
-                <label
-                    htmlFor="file-upload"
-                    className="inline-flex cursor-pointer items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 bg-primary text-primary-foreground shadow hover:bg-primary/90 h-9 px-4 py-2">Upload
-                </label>
             </div>
 
 
             <div>
                 <h2>Files uploaded:</h2>
-                <ul>
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4 p-2">
                     {userItems?.map((item) => (
-                        <li key={item.id} className="flex items-center justify-between gap-2">
-    <span
-        className="cursor-pointer text-blue-600 hover:underline"
-        onClick={() => item.is_folder ? enterFolder(item.id, item.storage_path, item.name) : downloadFile(item.id, currentFolderPath, item.name)}
-    >
-      {item.name}
-    </span>
-                            <button
-                                type="button"
-                                className="p-1 text-red-500 hover:text-red-700"
-                                onClick={() => item.is_folder ? removeFolder(item.id, item.storage_path) : removeFile(item.id, item.storage_path, item.name)}
-                            >
-                                <FaTrash size={16}/>
-                            </button>
-                            {item.is_folder && (<FaFolder size={16}/>)}
-                            <button
-                                type="button"
-                                className="p-1 text-red-500 hover:text-blue-700"
-                                onClick ={()=> shareItem(item.id, item.is_folder)}>
+                        <div
+                            key={item.id}
+                            className="group relative rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 shadow-sm p-3 flex flex-col items-center justify-center cursor-pointer hover:shadow-md hover:bg-gray-50 dark:hover:bg-gray-800 transition"
+                            onClick={() =>
+                                item.is_folder
+                                    ? enterFolder(item.id, item.ui_path ?? item.storage_path, item.name)
+                                    : downloadFile(item.id, item.storage_path, item.name)
+                            }
+                        >
+                            <div className="text-gray-700 dark:text-gray-300 group-hover:text-blue-600">
+                                {item.is_folder ? (
+                                    <FaFolder size={38}/>
+                                ) : (
+                                    getFileIcon(item.name)
+                                )}
+                            </div>
 
-                                <FaShare size={16}/>
-                            </button>
-                        </li>
+                            <p className="mt-2 text-sm text-center text-gray-800 dark:text-gray-200 truncate w-full">
+                                {item.name}
+                            </p>
+
+                            {/* Action bar (below filename, cleaner layout) */}
+                            <div className="mt-3 opacity-0 group-hover:opacity-100 transition flex gap-3">
+                                <button
+                                    type="button"
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        item.is_folder
+                                            ? removeFolder(item.id, item.storage_path)
+                                            : removeFile(item.id, item.storage_path, item.name);
+                                    }}
+                                    className="p-2 rounded-full hover:bg-red-100 dark:hover:bg-red-800 text-red-500 hover:text-red-700"
+                                    title="Delete"
+                                >
+                                    <FaTrash size={14} />
+                                </button>
+
+                                <button
+                                    type="button"
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        shareItem(item.id, item.is_folder);
+                                    }}
+                                    className="p-2 rounded-full hover:bg-blue-100 dark:hover:bg-blue-800 text-blue-500 hover:text-blue-700"
+                                    title="Share"
+                                >
+                                    <FaShare size={14} />
+                                </button>
+                            </div>
+                        </div>
                     ))}
-                </ul>
+                </div>
             </div>
 
 

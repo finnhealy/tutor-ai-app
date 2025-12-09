@@ -14,6 +14,14 @@ export async function DELETE(req: NextRequest) {
     const {data: queryData, error: queryError} = await supabase.rpc('delete_item', { p_id : req.nextUrl.searchParams.get("id"), p_user : d.user.id})
     const filename = req.nextUrl.searchParams.get("name"); // get the query param
     const filepath = req.nextUrl.searchParams.get("filepath");
+    if (queryData == false){
+        return new Response(
+            JSON.stringify({ error: "Unauthorized" }),
+            { status: 401 }
+        );
+    }
+    console.log(queryData)
+    console.log(queryError)
     console.log(`${filepath}/${filename}`);
     const { data, error } = await supabase.storage
         .from("user-files")

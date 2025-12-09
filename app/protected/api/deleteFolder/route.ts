@@ -34,6 +34,13 @@ export async function DELETE(req: NextRequest) {
         if (SecondQueryError){
             console.error(SecondQueryError)
         }
+        if (dataone.includes( false)){
+            return new Response(
+                JSON.stringify({ error: "Unauthorized" }),
+                { status: 401 }
+            );
+        }
+        console.log(dataone);
         //const {data: queryData, error: queryError} = await supabase.rpc('delete_item', { p_id : req.nextUrl.searchParams.get("id")})
         //const filename = req.nextUrl.searchParams.get("name"); // get the query param
         // const { data, error } = await supabase.storage
