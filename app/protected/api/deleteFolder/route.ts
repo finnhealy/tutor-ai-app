@@ -30,11 +30,13 @@ export async function DELETE(req: NextRequest) {
         const ItemIDs = allItems.map((item: Item) => item.item_id);
 
         const nonFolderPaths = allItems.filter((item : Item) => item.is_folder === false).map((item : Item) => item.storage_path + '/' + item.name)
-        const {data: dataone, error: SecondQueryError} = await supabase.rpc('delete_items', { ids : ItemIDs, p_user : d.user.id})
+        let t = [req.nextUrl.searchParams.get("id")];
+        const {data: dataone, error: SecondQueryError} = await supabase.rpc('delete_items', { ids : t, p_user : d.user.id})
         if (SecondQueryError){
             console.error(SecondQueryError)
         }
-        if (dataone.includes( false)){
+        console.log(dataone);
+        if (dataone.includes(false)){
             return new Response(
                 JSON.stringify({ error: "Unauthorized" }),
                 { status: 401 }

@@ -144,16 +144,12 @@ export default function Page() {
             console.error('Supabase client or user not available yet');
             return;
         }
-        let folderID = currentFolderID
-        if(!folderID){
-            console.log("nocurrentfolderid");
-            rootID = await getRootID();
-            folderID = rootID;
-        }else{
-
+        if(!currentFolderID){
+            return;
         }
-        console.log("calling get available items with folderid ", folderID);
-        const { data, error } = await supabase.rpc('get_available_items', {parent : folderID});
+
+        console.log("calling get available items with folderid ", currentFolderID);
+        const { data, error } = await supabase.rpc('get_available_items', {parent : currentFolderID});
         if(error){
             console.error(error);
             return;
@@ -444,9 +440,8 @@ export default function Page() {
 
 
     return (
-        <form>
-            <div className="flex items-center gap-3 mb-4">
-
+        <form className="w-full flex flex-col items-start">
+            <div className="flex items-center gap-3 mb-4 w-full justify-start">
                 {/* Back button */}
                 <button
                     type="button"
@@ -489,8 +484,7 @@ export default function Page() {
 
 
             <div>
-                <h2>Files uploaded:</h2>
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4 p-2">
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4 p-2 w-full">
                     {userItems?.map((item) => (
                         <div
                             key={item.id}
@@ -526,7 +520,7 @@ export default function Page() {
                                     className="p-2 rounded-full hover:bg-red-100 dark:hover:bg-red-800 text-red-500 hover:text-red-700"
                                     title="Delete"
                                 >
-                                    <FaTrash size={14} />
+                                    <FaTrash size={14}/>
                                 </button>
 
                                 <button
@@ -538,11 +532,14 @@ export default function Page() {
                                     className="p-2 rounded-full hover:bg-blue-100 dark:hover:bg-blue-800 text-blue-500 hover:text-blue-700"
                                     title="Share"
                                 >
-                                    <FaShare size={14} />
+                                    <FaShare size={14}/>
                                 </button>
                             </div>
                         </div>
                     ))}
+                    {userItems.length === 0 && (
+                        <p className="text-gray-500 text-sm p-4">No files in this folder</p>
+                    )}
                 </div>
             </div>
 

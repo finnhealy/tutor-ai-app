@@ -22,7 +22,7 @@ export default function ProtectedLayout({
             {!hasEnvVars ? <EnvVarWarning /> : <AuthButton />}
           </div>
         </nav>
-        <div className="flex-1 flex flex-col gap-20 max-w-5xl p-5">
+        <div className="flex-1 flex flex-col gap-20 max-w-5xl p-5 !items-start !justify-start self-start w-full">
           {children}
         </div>
 
