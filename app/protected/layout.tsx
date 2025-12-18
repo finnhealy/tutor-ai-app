@@ -17,6 +17,7 @@ export default function ProtectedLayout({
             <div className="flex gap-5 items-center font-semibold">
               <Link href={"/"}>Tutor AI</Link>
               <Link href={"/protected/fileUpload"}>File Upload</Link>
+              <Link href={"/protected/notes"}>Notes</Link>
 
             </div>
             {!hasEnvVars ? <EnvVarWarning/> : <AuthButton/>}

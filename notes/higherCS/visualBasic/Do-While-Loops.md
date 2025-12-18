@@ -28,7 +28,7 @@ Write code that asks the user for numbers until they enter -1.
 
 Model answer:
 
-```
+```vb
 Dim number As Integer = InputBox("Enter a number (-1 to stop)")
 
 While number <> -1

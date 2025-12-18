@@ -9,7 +9,7 @@ It is used to search through an array, checking each element one at a time.
 A message is displayed if a certain item is found.
 Alternatively, each matching item may be listed - these are both considered linear search at higher.
 
-```
+```vb
 Dim names(4) as String
 Dim found as Boolean = False
 Dim target As String = "Sebi"
@@ -40,20 +40,20 @@ An array called scores stores the test scores of five pupils.
 Dim scores() As Integer = {45, 62, 78, 55, 90}
 Write code to search the array to check if the value 78 is stored.
 
-```
+```vb
 Dim found as Boolean = False
-Dim target As Integer = 78
+Dim target As Integer = "4D"
 
-For counter = 0 To scores.Length - 1
-    if scores(counter) = target Then
+For counter = 0 To classes.Length - 1
+    if classes(counter) = target Then
         found = True
     End If
 Next
 
 If found = True Then
-    MsgBox("Found score 78")
+    MsgBox("Found class 4D")
 Else
-    MsgBox("Couldn't find score 78")
+    MsgBox("Couldn't find class 4D")
 End If
 
 ```

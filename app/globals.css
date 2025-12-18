@@ -10,8 +10,15 @@
   --keyboard-color-main: #0070f3;
 }
 
-
-
+pre.not-prose {
+  background: #0d1117;
+  color: #c9d1d9;
+  padding: 1rem;
+  border-radius: 0.75rem; /* slightly larger looks better */
+  overflow: auto;
+  max-width: 100%;
+  margin: 1.5rem 0;
+}
 
 @layer base {
   :root {
