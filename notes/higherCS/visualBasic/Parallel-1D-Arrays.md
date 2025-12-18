@@ -1,7 +1,9 @@
+---
 Subject: Higher Computing Science (Scotland)
 Language: Visual Basic .NET (VB8)
 Student Level: Higher
 Topic: Parallel 1D Arrays
+---
 
 Parallel 1D Arrays are used to hold related information. Each array stores a different attribute but the data is linked by the same index position. 
 For example, we can store a student's name, test score, 

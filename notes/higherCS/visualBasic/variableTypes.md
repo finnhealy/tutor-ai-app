@@ -1,7 +1,9 @@
+---
 Subject: Higher Computing Science (Scotland)
 Language: Visual Basic .NET (VB8)
 Student Level: Higher
 Topic: Variables and Data Types
+---
 
 A variable is a named location in memory used to store data while a program is running.
 Each variable must have a data type, which determines what kind of value it can store

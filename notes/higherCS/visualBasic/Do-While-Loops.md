@@ -1,7 +1,9 @@
+---
 Subject: Higher Computing Science (Scotland)
 Language: Visual Basic .NET (VB8)
 Student Level: Higher
 Topic: Iteration – While Loops
+---
 
 A Do While loop is used when we want code to repeat while a certain condition is true. 
 

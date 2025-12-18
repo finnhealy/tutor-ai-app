@@ -1,7 +1,9 @@
+---
 Subject: Higher Computing Science (Scotland)
 Language: Visual Basic .NET (VB8)
 Student Level: Higher
 Topic: Standard Algorithms - Count Occurrences
+---
 
 
 Count Occurrences is a standard algorithm that students are expected to know.

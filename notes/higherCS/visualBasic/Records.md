@@ -1,7 +1,9 @@
+---
 Subject: Higher Computing Science (Scotland)
 Language: Visual Basic .NET (VB8)
 Student Level: Higher
 Topic: Records
+---
 
 Records are used to store multiple pieces of related data about a single entity. For example, a movie record can store
 the name, rating and certificate in one record. This allows us to organise multiple pieces
