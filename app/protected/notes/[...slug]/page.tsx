@@ -86,7 +86,7 @@ export default async function NotesPage({
             )}
 
             <div
-                className="prose max-w-none dark:prose-invert dark:text-zinc-100"
+                className="prose max-w-none dark:prose-invert dark:text-zinc-100 "
                 dangerouslySetInnerHTML={{
                     __html: processed.toString(),
                 }}

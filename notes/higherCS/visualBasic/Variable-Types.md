@@ -6,17 +6,23 @@ Topic: Variables and Data Types
 ---
 
 A variable is a named location in memory used to store data while a program is running.
-Each variable must have a data type, which determines what kind of value it can store
 
-Common data types at Higher level
-•	Integer – stores whole numbers
-Example: Dim age As Integer
-•	String – stores text
-Example: Dim name As String
-•	Boolean – stores True or False
-Example: Dim isLoggedIn As Boolean
-•	Double – stores decimal numbers
-Example: Dim average As Double
+Each variable must have a data type, which determines what kind of value it can store.
+
+
+### Common data types at Higher level
+
+- **Integer** – stores whole numbers  
+  Example: `Dim age As Integer`
+
+- **String** – stores text  
+  Example: `Dim name As String`
+
+- **Boolean** – stores `True` or `False`  
+  Example: `Dim isLoggedIn As Boolean`
+
+- **Double** – stores decimal numbers  
+  Example: `Dim average As Double`
 
 Declaring and assigning variables
 
