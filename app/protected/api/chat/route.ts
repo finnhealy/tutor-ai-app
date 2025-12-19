@@ -6,10 +6,6 @@ const client = new OpenAI({
 
 export async function POST(req: Request) {
 
-    const res = await client.vectorStores.list();
-
-    console.log("Vector stores:", res.data.map(v => v.id));
-    return new Response(JSON.stringify({ ok: true }), { status: 200 });
     const { newMessages } = await req.json();
 
     const lastUserMessage =
@@ -64,6 +60,7 @@ Do NOT repeat it verbatim.
             }))
         ]
     });
+    console.log("OpenAI project header:", response.headers?.get("openai-project"));
 
     const reply =
         response.output_text || "No response";
