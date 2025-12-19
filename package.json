@@ -2,7 +2,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev --turbopack",
-    "build": "node rebuildVectorStore.js && next build",
+    "build": "node reBuildVectorStore.js && next build",
     "start": "next start",
     "lint": "eslint ."
   },
