@@ -5,6 +5,11 @@ const client = new OpenAI({
 });
 
 export async function POST(req: Request) {
+
+    const res = await client.vectorStores.list();
+
+    console.log("Vector stores:", res.data.map(v => v.id));
+    return new Response(JSON.stringify({ ok: true }), { status: 200 });
     const { newMessages } = await req.json();
 
     const lastUserMessage =
