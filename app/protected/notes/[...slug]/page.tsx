@@ -86,7 +86,27 @@ export default async function NotesPage({
             )}
 
             <div
-                className="prose max-w-none dark:prose-invert dark:text-zinc-100 "
+                className="
+    prose
+    max-w-none
+    dark:prose-invert
+    dark:text-zinc-100
+
+    [&_ul]:list-disc
+    [&_ul]:list-inside
+    [&_ul]:pl-6
+
+    [&_ol]:list-decimal
+    [&_ol]:list-inside
+    [&_ol]:pl-6
+
+    [&_li]:block
+    [&_li]:mb-2
+
+    [&_p]:mb-4
+    [&_h2]:mt-10 [&_h2]:mb-4
+    [&_h3]:mt-8  [&_h3]:mb-3
+  "
                 dangerouslySetInnerHTML={{
                     __html: processed.toString(),
                 }}

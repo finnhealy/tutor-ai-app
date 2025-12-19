@@ -35,3 +35,6 @@ If we want to display information using records we can access it like so:
 ```vb
 MsgBox("Movie: " & myMovie.Name & " has rating " & myMovie.Rating & " and certificate " & myMovie.Certificate )
 ```
+
+
+

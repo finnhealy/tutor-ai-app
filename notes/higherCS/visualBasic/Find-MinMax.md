@@ -36,3 +36,6 @@ SQA-style example:
 
 You have an array of test scores. Find and display the highest score and the lowest score. 
 Start by using the first score as both the current maximum and current minimum, then check the rest of the array.
+
+Note:
+In exam questions, finding the *longest word* or *most characters* is an example of the find maximum algorithm.
