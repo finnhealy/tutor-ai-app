@@ -16,7 +16,27 @@ const MathInput = dynamic(
     { ssr: false }
 );
 
+
 export default function ChatPage() {
+    const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+        setText(e.target.value)
+
+        // 👇 force scroll to bottom
+        requestAnimationFrame(() => {
+            if (textareaRef.current) {
+                textareaRef.current.scrollTop =
+                    textareaRef.current.scrollHeight
+            }
+        })
+    }
+    const syncScroll = () => {
+        if (!textareaRef.current || !overlayRef.current) return
+        overlayRef.current.scrollTop = textareaRef.current.scrollTop
+    }
+    const overlayRef = useRef<HTMLDivElement>(null)
+
+    const textareaRef = useRef<HTMLTextAreaElement>(null)
+
     const [messages, setMessages] = useState<
         { role: "user" | "assistant" | "system"; content: string }[]
     >([
@@ -166,6 +186,7 @@ export default function ChatPage() {
                         }}
                     >
                         <div
+                            ref={overlayRef}
                             style={{
                                 position: "absolute",
                                 inset: 0,
@@ -173,10 +194,12 @@ export default function ChatPage() {
                                 whiteSpace: "pre-wrap",
                                 pointerEvents: "none",
                                 color: "black",
+                                overflowY: "hidden", // 👈 important
+                                overflowX: "hidden",
                             }}
                         >
                             {text.trim() === "" ? (
-                                <span style={{ opacity: 0.4 }}>Type your question…</span>
+                                <span style={{opacity: 0.4}}>Type your question…</span>
                             ) : (
                                 <ReactMarkdown
                                     remarkPlugins={[remarkMath]}
@@ -188,9 +211,12 @@ export default function ChatPage() {
                         </div>
 
                         <textarea
+                            ref={textareaRef}
                             value={text}
-                            onChange={(e) => setText(e.target.value)}
-                            disabled={isLoading} // 👈 optional: disable input while loading
+                            onChange={handleChange}
+                            onScroll={syncScroll}   // 👈 REQUIRED
+                            onPaste={() => requestAnimationFrame(syncScroll)} // 👈 helps large pastes
+                            disabled={isLoading}
                             style={{
                                 position: "absolute",
                                 inset: 0,
@@ -198,16 +224,20 @@ export default function ChatPage() {
                                 background: "transparent",
                                 border: "1px solid #ccc",
                                 borderRadius: 8,
-                                resize: "vertical",
+                                resize: "none",
                                 fontSize: 16,
                                 lineHeight: "1.4em",
                                 color: "transparent",
                                 caretColor: "black",
+                                overflowY: "auto",
+                                overflowX: "hidden",
+                                whiteSpace: "pre-wrap",
+                                wordBreak: "break-word",
                             }}
                         />
                     </div>
 
-                    <div style={{ display: "flex", gap: 8 }}>
+                    <div style={{display: "flex", gap: 8}}>
                         <button
                             type="button"
                             onClick={() => setMathMode(true)}
