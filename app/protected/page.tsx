@@ -66,33 +66,44 @@ export default function ChatPage() {
     }, [messages, isLoading]);
 
     async function sendMessage(content: string) {
-        const newMessages = [...messages, { role: "user", content }];
+        const newMessages = [...messages, { role: "user" as const, content }];
         setMessages(newMessages);
         setIsLoading(true);
 
-        try {
-            const res = await fetch("/protected/api/chat", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ newMessages }),
-            });
+        const res = await fetch("/protected/api/chat", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ newMessages }),
+        });
 
-            const data = await res.json();
-            console.log(data.reply);
-            setMessages((m) => [...m, { role: "assistant", content: data.reply }]);
-        } catch (err) {
-            // (optional) add an error message
-            setMessages((m) => [
-                ...m,
-                {
-                    role: "assistant",
-                    content:
-                        "Sorry, something went wrong while fetching my reply. Please try again.",
-                },
-            ]);
-        } finally {
+        if (!res.body) {
             setIsLoading(false);
+            return;
         }
+
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder();
+
+        let assistantText = "";
+
+        // Add empty assistant message immediately
+        setMessages(m => [...m, { role: "assistant", content: "" }]);
+
+        while (true) {
+            const { value, done } = await reader.read();
+            if (done) break;
+
+            const chunk = decoder.decode(value);
+            assistantText += chunk;
+
+            setMessages(m => {
+                const updated = [...m];
+                updated[updated.length - 1].content = assistantText;
+                return updated;
+            });
+        }
+
+        setIsLoading(false);
     }
 
     function onSubmit(e: any) {
