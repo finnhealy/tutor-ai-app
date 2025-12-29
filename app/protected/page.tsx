@@ -134,7 +134,7 @@ export default function ChatPage() {
                         height: 600,
                         overflowY: "auto",
                         padding: 16,
-                        background: "#fafafa",
+                        color: "black"
                     }}
                 >
                     {messages
@@ -202,11 +202,14 @@ export default function ChatPage() {
                                 position: "absolute",
                                 inset: 0,
                                 padding: 10,
-                                whiteSpace: "pre-wrap",
+
+                                zIndex: 1,                 // 👈 REQUIRED
                                 pointerEvents: "none",
-                                color: "black",
-                                overflowY: "hidden", // 👈 important
-                                overflowX: "hidden",
+
+                                whiteSpace: "pre-wrap",
+                                overflow: "hidden",
+
+                                transform: "translateZ(0)",            // 👈 SAFARI FIX
                             }}
                         >
                             {text.trim() === "" ? (
@@ -248,7 +251,8 @@ export default function ChatPage() {
                         />
                     </div>
 
-                    <div style={{display: "flex", gap: 8}}>
+                    <div style={{display: "flex", gap: 8,color: "black"
+                    }}>
                         <button
                             type="button"
                             onClick={() => setMathMode(true)}
@@ -320,8 +324,7 @@ export default function ChatPage() {
                                     style={{
                                         padding: "8px 16px",
                                         borderRadius: 6,
-                                        background: "#4f46e5",
-                                        color: "white",
+                                        color: "black",
                                         border: "none",
                                     }}
                                 >
